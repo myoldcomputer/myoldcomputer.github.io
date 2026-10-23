@@ -3,7 +3,7 @@ const appConfigs = {
     mindmap: { title: 'Mind Map', icon: 'fa-sitemap text-cyan-600', url: 'https://ntoolz.github.io/mindmap/', width: 900, height: 550 },
     stickynote: { title: 'Sticky Notes', icon: 'fa-note-sticky text-amber-500', url: 'https://ntoolz.github.io/stickynote/', width: 900, height: 500 },
     mpw: { title: 'Password Generator', icon: 'fa-key text-emerald-600', url: 'https://ntoolz.github.io/mpw/', width: 700, height: 700 },
-    gi: { title: 'Glycemic Index', icon: 'fa-key text-rose-600', url: 'url_encoder_decoder.html', width: 700, height: 500 }
+    gi: { title: 'Glycemic Index', icon: 'fa-key text-rose-600', url: 'apps/glycemic_index.html', width: 700, height: 500 }
 };
 
 // SHA-512 Hashing setup on startup
@@ -119,7 +119,7 @@ function openApp(appId) {
     win.style.height = `${config.height}px`;
     win.style.left = `${Math.max(50, (window.innerWidth - config.width) / 2 + (Object.keys(activeWindows).length * 25))}px`;
     win.style.top = `${Math.max(40, (window.innerHeight - config.height) / 2 + (Object.keys(activeWindows).length * 25))}px`;
-    win.style.zIndex = zIndexCounter;
+    win.style.zIndex = zIndexCounter;debugger;
 
     win.innerHTML = `
         <div class="window-header h-10 bg-slate-100 border-b border-slate-200 flex items-center justify-between px-3 cursor-grab" onmousedown="startDrag(event, '${appId}')">

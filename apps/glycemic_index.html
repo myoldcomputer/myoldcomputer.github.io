@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glycemic Index & Load Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Main Container -->
+    <div class="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow flex flex-col">
+        
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 mb-6 border-b border-slate-200 gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="h-12 w-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+                    <i class="fa-solid fa-heart-pulse text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                        Glycemic Index & Load Tracker
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-500">
+                        Search foods, calculate glycemic load per serving, and track daily nutritional impact.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <button onclick="exportData()" class="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 shadow-sm transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-download text-emerald-600"></i> Export JSON
+                </button>
+                <label class="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-upload text-emerald-600"></i> Import JSON
+                    <input type="file" accept=".json" onchange="importData(event)" class="hidden">
+                </label>
+            </div>
+        </header>
+
+        <!-- Summary Statistics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Total Logged Items</p>
+                    <h3 id="stat-count" class="text-2xl font-bold text-slate-900">0</h3>
+                </div>
+                <div class="h-10 w-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-utensils"></i>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Total Glycemic Load (GL)</p>
+                    <h3 id="stat-total-gl" class="text-2xl font-bold text-emerald-600">0.0</h3>
+                </div>
+                <div class="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Average Daily GI</p>
+                    <h3 id="stat-avg-gi" class="text-2xl font-bold text-amber-600">0</h3>
+                </div>
+                <div class="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <i class="fa-solid fa-fire"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Grid Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Left Column: Food Database Search & Calculator -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Food Database Explorer -->
+                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
+                        <div class="relative flex-grow">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="food-search" oninput="filterFoods()" placeholder="Search foods (e.g., apple, brown rice, oats)..." class="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                        </div>
+                        
+                        <select id="category-filter" onchange="filterFoods()" class="px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-slate-700">
+                            <option value="all">All Categories</option>
+                            <option value="Fruits">Fruits</option>
+                            <option value="Vegetables">Vegetables</option>
+                            <option value="Grains">Grains & Bread</option>
+                            <option value="Dairy">Dairy & Alternatives</option>
+                            <option value="Snacks">Snacks & Sweets</option>
+                            <option value="Beverages">Beverages</option>
+                        </select>
+                    </div>
+
+                    <!-- Food Results List -->
+                    <div id="food-list-container" class="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Custom Food / Servings Calculator -->
+                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-emerald-600"></i> Serving & Glycemic Load Calculator
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Food Name</label>
+                            <input type="text" id="calc-name" placeholder="e.g., Jasmine Rice" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Category</label>
+                            <select id="calc-category" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500">
+                                <option value="Grains">Grains & Bread</option>
+                                <option value="Fruits">Fruits</option>
+                                <option value="Vegetables">Vegetables</option>
+                                <option value="Dairy">Dairy & Alternatives</option>
+                                <option value="Snacks">Snacks & Sweets</option>
+                                <option value="Beverages">Beverages</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Glycemic Index (GI, 0-100)</label>
+                            <input type="number" id="calc-gi" oninput="computeLiveGL()" placeholder="e.g., 68" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Carbs per Serving (g)</label>
+                            <input type="number" id="calc-carbs" oninput="computeLiveGL()" placeholder="e.g., 35" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono">
+                        </div>
+                    </div>
+
+                    <!-- Live Calculation Result Bar -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between mb-4">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Calculated Glycemic Load (GL)</span>
+                            <span id="live-gl-val" class="text-lg font-bold text-slate-800 font-mono">0.0</span>
+                        </div>
+                        <div id="live-gl-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">
+                            Select Food
+                        </div>
+                    </div>
+
+                    <button onclick="addCurrentToLog()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Add to Daily Log
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Daily Log & Tracker -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-emerald-600"></i> Daily Food Log
+                        </h2>
+                        <button onclick="clearLog()" class="text-xs text-rose-600 hover:text-rose-700 font-medium transition flex items-center gap-1">
+                            <i class="fa-solid fa-trash-can"></i> Clear All
+                        </button>
+                    </div>
+
+                    <!-- Log Table / List -->
+                    <div id="log-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Reference Legend Card -->
+                <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Glycemic Guidelines Reference</h3>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                            <span class="font-bold text-emerald-700 block mb-0.5">Low GI (≤ 55)</span>
+                            <span class="text-[11px] text-emerald-600">Slow digestion, minimal blood sugar spike.</span>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-200">
+                            <span class="font-bold text-amber-700 block mb-0.5">Med GI (56-69)</span>
+                            <span class="text-[11px] text-amber-600">Moderate absorption rate.</span>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 col-span-2">
+                            <span class="font-bold text-rose-700 block mb-0.5">High GI (≥ 70)</span>
+                            <span class="text-[11px] text-rose-600">Rapid digestion, high blood sugar impact. GL &lt; 10 is Low, 11-19 Medium, ≥ 20 High.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-4 border-t border-slate-200 text-center text-xs text-slate-500 bg-white/50 backdrop-blur-sm">
+        <p>Glycemic Index & Load Tracker • Built with Pure JavaScript & Tailwind CSS</p>
+    </footer>
+
+    <!-- Application Script -->
+    <script>
+        // Comprehensive Built-in Food Database
+        const foodDatabase = [
+            { name: "Apple (fresh, raw)", category: "Fruits", gi: 36, carbs: 14, serving: "1 medium (120g)" },
+            { name: "Banana (ripe)", category: "Fruits", gi: 51, carbs: 22, serving: "1 medium (118g)" },
+            { name: "Watermelon", category: "Fruits", gi: 72, carbs: 8, serving: "1 slice (150g)" },
+            { name: "Orange", category: "Fruits", gi: 43, carbs: 12, serving: "1 medium (130g)" },
+            { name: "Strawberries", category: "Fruits", gi: 41, carbs: 6, serving: "1 cup (150g)" },
+            { name: "Broccoli", category: "Vegetables", gi: 15, carbs: 4, serving: "1 cup (90g)" },
+            { name: "Sweet Potato (boiled)", category: "Vegetables", gi: 54, carbs: 20, serving: "1 medium (150g)" },
+            { name: "White Potato (baked)", category: "Vegetables", gi: 85, carbs: 30, serving: "1 medium (150g)" },
+            { name: "Carrots (boiled)", category: "Vegetables", gi: 39, carbs: 8, serving: "1/2 cup (75g)" },
+            { name: "Brown Rice (boiled)", category: "Grains", gi: 50, carbs: 23, serving: "1 cup cooked (195g)" },
+            { name: "White Rice (jasmine)", category: "Grains", gi: 89, carbs: 28, serving: "1 cup cooked (158g)" },
+            { name: "Oatmeal (rolled oats)", category: "Grains", gi: 55, carbs: 27, serving: "1 cup cooked (234g)" },
+            { name: "Whole Wheat Bread", category: "Grains", gi: 74, carbs: 14, serving: "1 slice (30g)" },
+            { name: "White Bread", category: "Grains", gi: 75, carbs: 15, serving: "1 slice (25g)" },
+            { name: "Pasta (spaghetti, white)", category: "Grains", gi: 49, carbs: 30, serving: "1 cup cooked (140g)" },
+            { name: "Milk (skim)", category: "Dairy", gi: 32, carbs: 12, serving: "1 cup (245ml)" },
+            { name: "Greek Yogurt (plain)", category: "Dairy", gi: 15, carbs: 6, serving: "1 container (170g)" },
+            { name: "Dark Chocolate (70% cocoa)", category: "Snacks", gi: 23, carbs: 13, serving: "1 oz (28g)" },
+            { name: "Popcorn (air-popped)", category: "Snacks", gi: 65, carbs: 18, serving: "3 cups (24g)" },
+            { name: "Orange Juice (unsweetened)", category: "Beverages", gi: 50, carbs: 26, serving: "1 cup (250ml)" }
+        ];
+
+        let foodLog = [];
+
+        // Initialize App on load
+        window.onload = function() {
+            loadFromLocalStorage();
+            filterFoods();
+            updateLogView();
+        };
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('gi_food_log');
+            if (saved) {
+                try {
+                    foodLog = JSON.parse(saved);
+                } catch (e) {
+                    foodLog = [];
+                }
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('gi_food_log', JSON.stringify(foodLog));
+        }
+
+        function filterFoods() {
+            const query = document.getElementById('food-search').value.toLowerCase();
+            const category = document.getElementById('category-filter').value;
+            const container = document.getElementById('food-list-container');
+
+            const filtered = foodDatabase.filter(food => {
+                const matchesQuery = food.name.toLowerCase().includes(query);
+                const matchesCat = category === 'all' || food.category === category;
+                return matchesQuery && matchesCat;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">No foods found matching criteria.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map((food, index) => {
+                const gl = ((food.gi * food.carbs) / 100).toFixed(1);
+                const giBadge = getGIBadgeHTML(food.gi);
+                const glBadge = getGLBadgeHTML(gl);
+
+                return `
+                    <div onclick="selectFoodForCalc('${food.name.replace(/'/g, "\\'")}', ${food.gi}, ${food.carbs}, '${food.category}')" class="p-3 bg-slate-50 hover:bg-emerald-50/50 border border-slate-200 hover:border-emerald-200 rounded-xl cursor-pointer transition flex items-center justify-between gap-3">
+                        <div class="flex-grow">
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-xs font-bold text-slate-800">${food.name}</h4>
+                                <span class="text-[10px] text-slate-400 bg-slate-200/60 px-2 py-0.5 rounded-md font-medium">${food.category}</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-0.5">Serving: ${food.serving} • Carbs: ${food.carbs}g</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            ${giBadge}
+                            ${glBadge}
+                            <button class="h-7 w-7 rounded-lg bg-white border border-slate-200 text-emerald-600 hover:bg-emerald-600 hover:text-white transition flex items-center justify-center text-xs shadow-sm">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getGIBadgeHTML(gi) {
+            let bg = "bg-emerald-50 text-emerald-700 border-emerald-200";
+            let label = "Low GI";
+            if (gi >= 70) {
+                bg = "bg-rose-50 text-rose-700 border-rose-200";
+                label = "High GI";
+            } else if (gi >= 56) {
+                bg = "bg-amber-50 text-amber-700 border-amber-200";
+                label = "Med GI";
+            }
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-bold border ${bg}" title="Glycemic Index: ${gi}">${label} (${gi})</span>`;
+        }
+
+        function getGLBadgeHTML(gl) {
+            let bg = "bg-emerald-50 text-emerald-700 border-emerald-200";
+            let label = "Low GL";
+            if (gl >= 20) {
+                bg = "bg-rose-50 text-rose-700 border-rose-200";
+                label = "High GL";
+            } else if (gl >= 11) {
+                bg = "bg-amber-50 text-amber-700 border-amber-200";
+                label = "Med GL";
+            }
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-bold border ${bg}" title="Glycemic Load: ${gl}">${label} (${gl})</span>`;
+        }
+
+        function selectFoodForCalc(name, gi, carbs, category) {
+            document.getElementById('calc-name').value = name;
+            document.getElementById('calc-gi').value = gi;
+            document.getElementById('calc-carbs').value = carbs;
+            document.getElementById('calc-category').value = category;
+            computeLiveGL();
+            showToast(`Loaded "${name}" into calculator`);
+        }
+
+        function computeLiveGL() {
+            const gi = parseFloat(document.getElementById('calc-gi').value) || 0;
+            const carbs = parseFloat(document.getElementById('calc-carbs').value) || 0;
+            const gl = ((gi * carbs) / 100).toFixed(1);
+
+            document.getElementById('live-gl-val').textContent = gl;
+            const badgeEl = document.getElementById('live-gl-badge');
+            
+            if (gl < 10) {
+                badgeEl.className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700";
+                badgeEl.textContent = `Low GL (${gl})`;
+            } else if (gl <= 19) {
+                badgeEl.className = "px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700";
+                badgeEl.textContent = `Medium GL (${gl})`;
+            } else {
+                badgeEl.className = "px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700";
+                badgeEl.textContent = `High GL (${gl})`;
+            }
+        }
+
+        function addCurrentToLog() {
+            const name = document.getElementById('calc-name').value.trim();
+            const category = document.getElementById('calc-category').value;
+            const gi = parseFloat(document.getElementById('calc-gi').value);
+            const carbs = parseFloat(document.getElementById('calc-carbs').value);
+
+            if (!name || isNaN(gi) || isNaN(carbs)) {
+                showToast("Please enter valid food details", "error");
+                return;
+            }
+
+            const gl = parseFloat(((gi * carbs) / 100).toFixed(1));
+            
+            const logItem = {
+                id: Date.now(),
+                name,
+                category,
+                gi,
+                carbs,
+                gl,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            foodLog.unshift(logItem);
+            saveToLocalStorage();
+            updateLogView();
+            showToast(`Added "${name}" to daily log`);
+        }
+
+        function removeFromLog(id) {
+            foodLog = foodLog.filter(item => item.id !== id);
+            saveToLocalStorage();
+            updateLogView();
+            showToast("Item removed from log");
+        }
+
+        function clearLog() {
+            if (foodLog.length === 0) return;
+            foodLog = [];
+            saveToLocalStorage();
+            updateLogView();
+            showToast("Daily log cleared");
+        }
+
+        function updateLogView() {
+            const container = document.getElementById('log-container');
+            document.getElementById('stat-count').textContent = foodLog.length;
+
+            let totalGL = 0;
+            let totalGI = 0;
+
+            if (foodLog.length > 0) {
+                totalGL = foodLog.reduce((sum, item) => sum + item.gl, 0);
+                totalGI = foodLog.reduce((sum, item) => sum + item.gi, 0) / foodLog.length;
+            }
+
+            document.getElementById('stat-total-gl').textContent = totalGL.toFixed(1);
+            document.getElementById('stat-avg-gi').textContent = Math.round(totalGI);
+
+            if (foodLog.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">No items logged today yet. Use the calculator or food database to add items.</div>`;
+                return;
+            }
+
+            container.innerHTML = foodLog.map(item => {
+                return `
+                    <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                        <div class="flex-grow">
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-xs font-bold text-slate-800">${item.name}</h4>
+                                <span class="text-[10px] text-slate-400">${item.time}</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-[11px] text-slate-500">GI: <b>${item.gi}</b></span>
+                                <span class="text-[11px] text-slate-500">Carbs: <b>${item.carbs}g</b></span>
+                                <span class="text-[11px] text-emerald-600 font-semibold">GL: ${item.gl}</span>
+                            </div>
+                        </div>
+                        <button onclick="removeFromLog(${item.id})" class="h-8 w-8 rounded-lg bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 transition flex items-center justify-center text-xs shadow-sm">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(foodLog, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `glycemic_log_${new Date().toISOString().slice(0, 10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("Food log exported successfully!");
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        foodLog = imported;
+                        saveToLocalStorage();
+                        updateLogView();
+                        showToast("Food log imported successfully!");
+                    } else {
+                        showToast("Invalid JSON format", "error");
+                    }
+                } catch (err) {
+                    showToast("Failed to parse JSON file", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-medium text-white transition-all transform translate-y-2 opacity-0 ${
+                type === 'success' ? 'bg-slate-900 border border-slate-800' : 'bg-rose-600'
+            }`;
+            toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-xmark'}"></i> ${message}`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
