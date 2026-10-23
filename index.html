@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows Workstation</title>
+    <script src="tailwindcss.js"></script>
+    <!--<link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">-->
+    <link rel="stylesheet" href="css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body id="desktop-bg">
+
+    <!-- Login Screen Overlay -->
+    <div id="login-screen" class="fixed inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-indigo-950 z-[9999] flex flex-col items-center justify-center text-white">
+        <div class="w-24 h-24 rounded-full bg-blue-600/40 border-2 border-white/20 flex items-center justify-center text-4xl font-semibold mb-4 shadow-xl">
+            <i class="fa-solid fa-user"></i>
+        </div>
+        <h2 class="text-2xl font-semibold mb-1">_killercodes</h2>
+        <p class="text-xs text-slate-300 mb-6">Secure Workstation</p>
+        <form onsubmit="handleLogin(event)" class="flex flex-col items-center w-80">
+            <div class="relative w-full mb-3">
+                <input type="password" id="login-password" placeholder="Enter password (try anything)" class="w-full bg-white/10 border border-white/20 rounded-md py-2.5 px-4 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-md">
+                <button type="submit" class="absolute right-2 top-2 text-slate-300 hover:text-white px-2 py-1 text-sm"><i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+            <div id="login-error" class="text-red-400 text-xs h-5 mb-2 font-medium"></div>
+        </form>
+    </div>
+
+
+    <!-- Desktop Grid Icons -->
+    <div class="desktop-grid" id="desktop-grid">
+        <!-- Mind Map -->
+        <desktop-icon app="mindmap" icon="fa-brain" color="text-cyan-600" label="Mind Map"></desktop-icon>
+
+        <!-- Sticky Notes -->
+        <desktop-icon app="stickynote" icon="fa-note-sticky" color="text-amber-500" label="Sticky Notes"></desktop-icon>
+
+        <!-- Password Gen -->
+        <desktop-icon app="mpw" icon="fa-key" color="text-emerald-600" label="Password Gen"></desktop-icon>
+
+        <!-- Glycemic Index -->
+        <desktop-icon app="gi" icon="fa-syringe" color="text-rose-600" label="Glaycemic Index"></desktop-icon>
+    </div>
+
+    <!-- Windows Container -->
+    <div id="windows-container"></div>
+
+    <!-- Start Menu -->
+    <div class="start-menu" id="start-menu">
+        <div class="mb-4">
+            <span class="text-xs font-semibold text-slate-700">Pinned Apps</span>
+        </div>
+        <div class="grid grid-cols-3 gap-4 text-center">
+
+            <desktop-icon app="mindmap" icon="fa-brain" color="text-cyan-600" label="Mind Map"></desktop-icon>
+            <div onclick="openApp('stickynote'); toggleStartMenu();" class="p-3 hover:bg-slate-100 rounded-lg cursor-pointer flex flex-col items-center">
+                <i class="fa-solid fa-note-sticky text-3xl text-amber-500 mb-1"></i>
+                <span class="text-xs text-slate-700">Sticky Notes</span>
+            </div>
+            <div onclick="openApp('mpw'); toggleStartMenu();" class="p-3 hover:bg-slate-100 rounded-lg cursor-pointer flex flex-col items-center">
+                <i class="fa-solid fa-key text-3xl text-emerald-600 mb-1"></i>
+                <span class="text-xs text-slate-700">Password Gen</span>
+            </div>
+        </div>
+        <div class="mt-auto pt-4 border-t border-slate-200 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-sm">k</div>
+                <span class="text-xs font-medium text-slate-800">killercodes</span>
+            </div>
+            <button onclick="location.reload()" class="p-2 hover:bg-slate-200 rounded-full text-slate-700 text-xs" title="Lock"><i class="fa-solid fa-lock"></i></button>
+        </div>
+    </div>
+
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <div class="flex items-center space-x-1">
+            <div class="taskbar-item" onclick="toggleStartMenu()" title="Start">
+                <i class="fa-brands fa-windows text-blue-600 text-xl"></i>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-1" id="taskbar-apps">
+            <!-- Dynamic taskbar open app buttons -->
+        </div>
+
+        <div class="flex items-center space-x-2 text-slate-700 text-xs pr-2">
+            <div class="text-right">
+                <div class="font-medium" id="taskbar-time">12:00 PM</div>
+                <div class="text-[10px] text-slate-500" id="taskbar-date">10/23/2026</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Message Box Modal -->
+    <div id="custom-msgbox" class="fixed inset-0 bg-black/20 backdrop-blur-xs z-[2000] hidden flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-sm w-full win-shadow border border-slate-200">
+            <h3 id="msgbox-title" class="font-semibold text-slate-800 text-base mb-2">Notice</h3>
+            <p id="msgbox-text" class="text-sm text-slate-600 mb-6">Message content here.</p>
+            <div class="flex justify-end">
+                <button onclick="closeMsgBox()" class="bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
